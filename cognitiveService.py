@@ -3,8 +3,13 @@ import os, json
 from azure.cognitiveservices.language.textanalytics import TextAnalyticsClient
 from msrest.authentication import CognitiveServicesCredentials
 
-subscription_key = 'a80b7044b2db461aabbbf4d4295e2d84'
-endpoint = 'https://twitter-analitics-service.cognitiveservices.azure.com/'
+#Acessando o arquivo com as keys
+with open('env.json', 'r') as f:
+    content = json.loads(f.read())
+f.close()
+
+subscription_key = content['subscription_key']
+endpoint = content['endpoint']
 
 def authenticateClient():
     credentials = CognitiveServicesCredentials(subscription_key)
@@ -13,16 +18,26 @@ def authenticateClient():
     return text_analytics_client
 
 def sentiment():
+    #Criando um client já autenticado
     client = authenticateClient()
     try:
+        #Lendo os tweets que foram salvos anteriormente
         with open('twitters.json', 'r') as f:
-            documents = json.loads(f.read())
-        response = client.sentiment(documents=documents)
-        sum = 0
-        for document in response.documents:
-            print("Document Id: ", document.id, ", Sentiment Score: ",
-                  "{:.2f}".format(document.score))
-            sum += document.score
-        print("Média ====== {}".format((sum/len(response.documents))))
+            tweets = json.loads(f.read())
+
+        #Fazendo a análise dos sentimentos
+        response = client.sentiment(documents=tweets)
+        sum_total = 0
+
+        for index, document in enumerate(response.documents):
+            tweets[index]["score"] = document.score
+            sum_total += document.score
+
+        #Calculo e mostro a média de Scores
+        average = (sum_total/len(response.documents)) * 100
+        print("Média dos Scores: {0:.2f}%".format(average))
+
+        #Retornando os tweets com o score
+        return tweets
     except Exception as err:
         print("Encountered exception. {}".format(err))
